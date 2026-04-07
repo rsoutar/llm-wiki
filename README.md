@@ -1,4 +1,4 @@
-# OpenCode Wiki
+# opencode-wiki
 
 OpenCode conversations compile themselves into a persistent Markdown wiki. This gives OpenCode a two-tier memory system that retains knowledge across sessions.
 
@@ -125,7 +125,7 @@ npm install --prefix .opencode
 
 Then open this repo in OpenCode.
 
-Project config lives in [`opencode.json`](/Users/rsoutar/Projects/rsoutar/llm-wiki/opencode.json) and the compiler schema lives in [`AGENTS.md`](/Users/rsoutar/Projects/rsoutar/llm-wiki/AGENTS.md).
+Project config lives in [`opencode.json`](opencode.json) and the compiler schema lives in [`AGENTS.md`](AGENTS.md).
 
 ## Install Into Another Repo
 
@@ -152,11 +152,52 @@ your-project/
 
 Then run OpenCode from the target project root, not from `wiki/`.
 
+## Use It In Your Repo
+
+After install, your day-to-day workflow happens in your own repo, not in this `opencode-wiki` source repo.
+
+Example installed repo:
+
+```text
+/path/to/your/project/
+├── opencode.json
+├── .opencode/plugins/opencode-wiki.js
+└── wiki/
+    ├── AGENTS.md
+    ├── daily/
+    ├── knowledge/
+    ├── pyproject.toml
+    └── scripts/
+```
+
+Typical flow:
+
+1. Start OpenCode from your project root:
+
+```bash
+cd /path/to/your/project
+opencode
+```
+
+2. Work normally in OpenCode.
+3. `opencode-wiki` automatically appends durable conversation summaries into `wiki/daily/`.
+4. Let automatic compilation run later, or compile manually when you want `wiki/knowledge/` updated right away.
+5. Ask questions in future sessions and let the wiki context feed back into the prompt.
+
 ## Upgrade an Existing Install
 
 Use the upgrade script instead of rerunning setup:
 
 ```bash
+./scripts/upgrade.sh /path/to/your/project
+```
+
+Run that command from the `opencode-wiki` source repo, not from the installed repo.
+
+Example:
+
+```bash
+cd /path/to/opencode-wiki
 ./scripts/upgrade.sh /path/to/your/project
 ```
 
@@ -182,17 +223,55 @@ By default it leaves the target repo's root `opencode.json` alone. If you want t
 ./scripts/upgrade.sh --sync-root-config /path/to/your/project
 ```
 
-## Commands
+## Commands In Your Repo
+
+Once `opencode-wiki` is installed into another repo, these are the manual commands you run from your project root:
+
+```bash
+cd /path/to/your/project
+uv run --directory wiki python scripts/compile.py
+uv run --directory wiki python scripts/compile.py --all
+uv run --directory wiki python scripts/compile.py --file daily/2026-04-07.md
+uv run --directory wiki python scripts/query.py "What patterns do I keep using for auth?"
+uv run --directory wiki python scripts/query.py "How do I tend to structure background jobs?" --file-back
+uv run --directory wiki python scripts/lint.py
+uv run --directory wiki python scripts/lint.py --structural-only
+```
+
+If you are working inside the `opencode-wiki` source repo itself, you can use the shorter source-repo versions:
 
 ```bash
 uv run python scripts/compile.py
-uv run python scripts/compile.py --all
-uv run python scripts/compile.py --file daily/2026-04-07.md
 uv run python scripts/query.py "What patterns do I keep using for auth?"
-uv run python scripts/query.py "How do I tend to structure background jobs?" --file-back
 uv run python scripts/lint.py
-uv run python scripts/lint.py --structural-only
 ```
+
+## What Is In `scripts/`
+
+Some scripts are user-facing and some are internal.
+
+Run these yourself when needed:
+
+- `scripts/compile.py`: compile `daily/` logs into `knowledge/`
+- `scripts/query.py`: ask questions against the compiled wiki
+- `scripts/lint.py`: check wiki health and structure
+
+Usually run these only from the `opencode-wiki` source repo:
+
+- `scripts/setup.sh`: install `opencode-wiki` into another repo
+- `scripts/upgrade.sh`: upgrade an existing install in another repo without replacing its wiki data
+
+Normally do not run these directly:
+
+- `scripts/flush.py`: called by the plugin on idle to summarize new transcript deltas
+- `scripts/config.py`: shared paths and config values
+- `scripts/utils.py`: helper functions
+- `scripts/opencode_runner.py`: wrapper around `opencode run`
+- `scripts/state.json` and `scripts/last-flush.json`: state files managed by the system
+
+Important:
+
+- If you run `wiki/scripts/setup.sh` or `wiki/scripts/upgrade.sh` from inside an installed repo, they will use that installed copy as the source of truth. That is usually not what you want. Prefer running those two scripts from your canonical `opencode-wiki` checkout.
 
 ## How To Use It
 
@@ -212,7 +291,7 @@ If `daily/` is not updating:
 
 If `knowledge/` is not updating:
 
-- Run `uv run python scripts/compile.py` manually once to confirm the compile path works.
+- Run `uv run --directory wiki python scripts/compile.py` manually once to confirm the compile path works.
 - Remember that automatic compile is time-gated to after `6:00 PM` local time.
 
 ## License
