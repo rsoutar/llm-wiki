@@ -6,6 +6,9 @@ const STATE_DIRNAME = ".opencode/state";
 const MAX_CONTEXT_CHARS = 18000;
 const MAX_RECENT_LOG_LINES = 40;
 const MAX_SESSION_MESSAGES = 80;
+const DEBUG_LOG = ".opencode/plugin-events.log";
+const FLUSH_ERROR_LOG = ".opencode/flush-errors.log";
+const inflightFlushes = new Set();
 
 function unwrap(result) {
   return result && typeof result === "object" && "data" in result ? result.data : result;
@@ -89,9 +92,8 @@ async function buildKnowledgeContext(rootDir) {
 
 async function fetchMessages(client, directory, sessionID) {
   const response = await client.session.messages({
-    sessionID,
-    directory,
-    limit: MAX_SESSION_MESSAGES,
+    path: { id: sessionID },
+    query: { directory, limit: MAX_SESSION_MESSAGES },
   });
   return unwrap(response) ?? [];
 }
@@ -124,11 +126,12 @@ function formatTranscript(messages) {
   return turns.join("\n\n");
 }
 
-async function spawnFlush(rootDir, sessionID, reason, transcript) {
+async function spawnFlush(rootDir, sessionID, reason, transcript, debugLog) {
   const stateDir = path.join(rootDir, STATE_DIRNAME);
   await ensureDir(stateDir);
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const transcriptPath = path.join(stateDir, `flush-${sessionID}-${stamp}.md`);
+  const uniqueSuffix = Math.random().toString(36).slice(2, 8);
+  const transcriptPath = path.join(stateDir, `flush-${sessionID}-${stamp}-${uniqueSuffix}.md`);
   await fs.writeFile(transcriptPath, transcript, "utf8");
 
   const child = Bun.spawn(
@@ -149,10 +152,20 @@ async function spawnFlush(rootDir, sessionID, reason, transcript) {
         ...process.env,
         [INTERNAL_ENV]: "1",
       },
-      stdout: "ignore",
-      stderr: "ignore",
+      stdout: "pipe",
+      stderr: "pipe",
     },
   );
+
+  // Log flush errors asynchronously
+  child.exited.then(async (code) => {
+    if (code !== 0) {
+      const stderr = await new Response(child.stderr).text();
+      const errorLog = path.join(rootDir, FLUSH_ERROR_LOG);
+      const entry = `${isoNow()} code=${code} session=${sessionID} reason=${reason}\n${stderr}\n`;
+      await fs.appendFile(errorLog, entry).catch(() => {});
+    }
+  });
 
   if (typeof child.unref === "function") {
     child.unref();
@@ -164,8 +177,27 @@ export const LlmWikiPlugin = async ({ client, directory }) => {
     return {};
   }
 
-  const rootDir = directory;
+  let rootDir = directory;
+  // Auto-detect wiki root: standalone (knowledge/ at root) or subdirectory (wiki/knowledge/)
+  try {
+    await fs.access(path.join(directory, "knowledge", "index.md"));
+  } catch {
+    try {
+      await fs.access(path.join(directory, "wiki", "knowledge", "index.md"));
+      rootDir = path.join(directory, "wiki");
+    } catch {
+      // No wiki found — use directory as-is
+    }
+  }
   const stateDir = path.join(rootDir, STATE_DIRNAME);
+  const debugLogPath = path.join(rootDir, DEBUG_LOG);
+  await ensureDir(path.dirname(debugLogPath));
+
+  async function debugLog(message) {
+    await fs.appendFile(debugLogPath, `${isoNow()} ${message}\n`).catch(() => {});
+  }
+
+  await debugLog("Plugin initialized, rootDir=" + rootDir);
 
   async function log(level, message, extra = {}) {
     try {
@@ -183,6 +215,7 @@ export const LlmWikiPlugin = async ({ client, directory }) => {
   }
 
   async function maybeFlushSession(sessionID, reason) {
+    await debugLog(`maybeFlushSession called: session=${sessionID} reason=${reason}`);
     const sessionStatePath = path.join(stateDir, `${sessionID}.json`);
     const sessionState = await readJson(sessionStatePath, {
       lastMessageID: null,
@@ -190,16 +223,26 @@ export const LlmWikiPlugin = async ({ client, directory }) => {
       reason: null,
     });
 
-    const messages = await fetchMessages(client, rootDir, sessionID);
+    const messages = await fetchMessages(client, directory, sessionID);
+    await debugLog(`Fetched ${messages.length} messages for session ${sessionID}`);
     if (!messages.length) {
       return;
     }
 
-    const newMessages = findNewMessages(messages, sessionState.lastMessageID);
-    const transcript = formatTranscript(newMessages);
     const newestMessageID = messages[messages.length - 1]?.info?.id ?? null;
+    const flushKey = newestMessageID ? `${sessionID}:${newestMessageID}` : sessionID;
+
+    if (inflightFlushes.has(flushKey)) {
+      await debugLog(`Flush already in flight for ${flushKey}, skipping duplicate trigger`);
+      return;
+    }
+
+    const newMessages = findNewMessages(messages, sessionState.lastMessageID);
+    await debugLog(`New messages: ${newMessages.length} (lastMessageID=${sessionState.lastMessageID})`);
+    const transcript = formatTranscript(newMessages);
 
     if (!transcript.trim()) {
+      await debugLog(`Empty transcript, skipping flush`);
       if (newestMessageID && newestMessageID !== sessionState.lastMessageID) {
         await writeJson(sessionStatePath, {
           ...sessionState,
@@ -209,19 +252,32 @@ export const LlmWikiPlugin = async ({ client, directory }) => {
       return;
     }
 
-    await spawnFlush(rootDir, sessionID, reason, truncate(transcript, MAX_CONTEXT_CHARS));
-    await writeJson(sessionStatePath, {
-      lastMessageID: newestMessageID,
-      lastFlushedAt: isoNow(),
-      reason,
-    });
-    await log("info", "Queued memory flush", { sessionID, reason, messageCount: newMessages.length });
+    inflightFlushes.add(flushKey);
+    try {
+      await debugLog(`Flushing transcript (${transcript.length} chars)`);
+      await spawnFlush(rootDir, sessionID, reason, truncate(transcript, MAX_CONTEXT_CHARS), debugLog);
+      await writeJson(sessionStatePath, {
+        lastMessageID: newestMessageID,
+        lastFlushedAt: isoNow(),
+        reason,
+      });
+      await log("info", "Queued memory flush", { sessionID, reason, messageCount: newMessages.length });
+      await debugLog(`Flush queued successfully`);
+    } finally {
+      inflightFlushes.delete(flushKey);
+    }
   }
 
   return {
     event: async ({ event }) => {
+      await debugLog(`Event received: ${event.type}`);
+
       if (event.type === "session.idle") {
         await maybeFlushSession(event.properties.sessionID, "session.idle");
+      }
+
+      if (event.type === "session.status" && event.properties.status?.type === "idle") {
+        await maybeFlushSession(event.properties.sessionID, "session.status.idle");
       }
 
       if (event.type === "session.deleted") {

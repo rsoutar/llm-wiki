@@ -1,39 +1,92 @@
 # LLM Wiki for OpenCode
 
-**OpenCode conversations compile themselves into a persistent markdown wiki.**
+OpenCode conversations compile themselves into a persistent Markdown wiki.
 
-This project adapts Andrej Karpathy's [LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) to OpenCode. Instead of treating each conversation as disposable chat history, the repo captures meaningful session deltas into daily logs, then compiles those logs into a structured wiki with concept pages, connection pages, and filed answers.
+This project adapts Andrej Karpathy's [LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) to OpenCode. Instead of treating each conversation as disposable chat history, it captures meaningful session deltas into daily logs and compiles those logs into a maintained knowledge base.
 
-## How It Works
+## What It Does
 
 ```text
 OpenCode session
   -> .opencode/plugins/llm-wiki.js captures new transcript deltas
   -> scripts/flush.py summarizes them into daily/YYYY-MM-DD.md
   -> scripts/compile.py compiles daily logs into knowledge/*
-  -> scripts/query.py answers from the wiki
-  -> scripts/lint.py health-checks the wiki
+  -> scripts/query.py answers questions from the wiki
+  -> scripts/lint.py checks wiki health
 ```
 
-The architecture mirrors the Claude-oriented reference repo, but swaps Claude hooks for OpenCode plugins and uses `opencode run` for the LLM work.
+The result is a lightweight memory layer for OpenCode:
 
-## Setup
+- `daily/` stores append-only raw session logs
+- `knowledge/` stores compiled concepts, connections, and filed Q&A
+- `knowledge/index.md` becomes the main retrieval surface for future chats
 
-1. Install Python dependencies and create the runtime environment:
+## Repository Layout
 
-   ```bash
-   uv sync
-   ```
+```text
+.
+├── AGENTS.md
+├── daily/
+├── knowledge/
+├── opencode.json
+├── scripts/
+└── .opencode/plugins/llm-wiki.js
+```
 
-2. Install the local OpenCode plugin dependency:
+## Requirements
 
-   ```bash
-   npm install --prefix .opencode
-   ```
+- [OpenCode](https://opencode.ai/)
+- Python 3.11+
+- [`uv`](https://docs.astral.sh/uv/)
+- `npm`
 
-3. Open this repo in OpenCode.
+## Local Development
 
-Project config lives in [opencode.json](/Users/rsoutar/Projects/rsoutar/llm-wiki/opencode.json) and the compiler schema lives in [AGENTS.md](/Users/rsoutar/Projects/rsoutar/llm-wiki/AGENTS.md).
+```bash
+uv sync
+npm install --prefix .opencode
+```
+
+Then open this repo in OpenCode.
+
+Project config lives in [`opencode.json`](/Users/rsoutar/Projects/rsoutar/llm-wiki/opencode.json) and the compiler schema lives in [`AGENTS.md`](/Users/rsoutar/Projects/rsoutar/llm-wiki/AGENTS.md).
+
+## Install Into Another Repo
+
+The easiest path is the setup script:
+
+```bash
+./scripts/setup.sh /path/to/your/project
+```
+
+That creates this structure inside the target project:
+
+```text
+your-project/
+├── opencode.json
+├── .opencode/plugins/llm-wiki.js
+└── wiki/
+    ├── AGENTS.md
+    ├── daily/
+    ├── knowledge/
+    └── scripts/
+```
+
+Then run OpenCode from the target project root, not from `wiki/`.
+
+## Automatic Behavior
+
+What happens automatically after installation:
+
+- On chat idle, the plugin captures the new part of the conversation.
+- If the transcript has durable value, it appends an entry to `daily/YYYY-MM-DD.md`.
+- The plugin injects `knowledge/index.md` and recent daily-log context back into future sessions.
+
+Compilation behavior:
+
+- `daily/` capture is automatic.
+- `knowledge/` compilation can auto-run after `6:00 PM` local time when a successful flush changed the current daily log.
+- If you want compilation immediately, run it manually.
 
 ## Commands
 
@@ -47,9 +100,38 @@ uv run python scripts/lint.py
 uv run python scripts/lint.py --structural-only
 ```
 
+## How To Use It
+
+1. Work normally in OpenCode.
+2. Let `daily/` accumulate session logs automatically.
+3. Compile into `knowledge/` periodically, or let evening auto-compile pick it up.
+4. Ask future questions in the same repo and let the wiki context feed back into the session.
+
+## Troubleshooting
+
+If `daily/` is not updating:
+
+- Make sure you launched OpenCode from the project root that contains `opencode.json`.
+- Check `.opencode/plugins/llm-wiki.js` exists in the target project.
+- Check `wiki/scripts/flush.log` and `wiki/.opencode/flush-errors.log` in the installed project.
+- Make sure `npm install` has been run inside the target project's `.opencode/`.
+
+If `knowledge/` is not updating:
+
+- Run `uv run python scripts/compile.py` manually once to confirm the compile path works.
+- Remember that automatic compile is time-gated to after `6:00 PM` local time.
+
+## Open Source Checklist
+
+Before publishing, the main remaining non-code items are:
+
+- License: Apache 2.0
+- Add a short GitHub description and topics
+- Add one real example or screenshot of `daily/` and `knowledge/`
+- Optionally add `CONTRIBUTING.md` once you want outside patches
+
 ## Notes
 
 - Automatic capture happens through the local OpenCode plugin in `.opencode/plugins/`.
-- The plugin injects the current wiki index and recent log context back into future sessions.
-- After 6 PM local time, a successful memory flush can automatically trigger compilation if the daily log changed.
 - Internal maintenance runs set `OPENCODE_MEMORY_INTERNAL=1` so they do not recursively trigger the capture plugin.
+- The wiki works best when `knowledge/index.md` stays compact and high-signal.

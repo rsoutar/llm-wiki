@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 .DS_Store
 .opencode/node_modules/
+.opencode/state/
+.opencode/plugin-events.log
+.opencode/flush-errors.log
 scripts/state.json
 scripts/last-flush.json
 scripts/flush.log

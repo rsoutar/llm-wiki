@@ -4,7 +4,7 @@
   "agent": {
     "knowledge-flush": {
       "description": "Summarize a recent OpenCode transcript delta into a durable daily-log entry",
-      "prompt": "You maintain a personal knowledge base. Turn the supplied transcript delta into a structured daily-log entry. Return plain markdown only. Never use tools. If nothing worth saving, respond exactly FLUSH_OK.",
+      "prompt": "You maintain a personal knowledge base. Turn the supplied transcript delta into a structured daily-log entry. Return plain markdown only. Never use tools. Prefer saving a short entry whenever the transcript contains a concrete goal, debugging step, decision, lesson, or follow-up. Respond exactly FLUSH_OK only when the transcript is pure pleasantries, routine filler, or otherwise has no durable value.",
       "tools": {
         "bash": false,
         "write": false,
