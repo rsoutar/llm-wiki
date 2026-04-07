@@ -1,8 +1,8 @@
 # LLM Wiki for OpenCode
 
-OpenCode conversations compile themselves into a persistent Markdown wiki.
+OpenCode conversations compile themselves into a persistent Markdown wiki. This gives OpenCode a two-tier memory system that retains knowledge across sessions.
 
-This project adapts Andrej Karpathy's [LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) to OpenCode. Instead of treating each conversation as disposable chat history, it captures meaningful session deltas into daily logs and compiles those logs into a maintained knowledge base.
+This project adapts Andrej Karpathy's [LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) to OpenCode. Instead of treating each conversation as disposable chat history, it captures meaningful session deltas into daily logs and compiles those logs into a maintained knowledge base. The compiled wiki is injected back into future sessions, creating persistent memory.
 
 ## What It Does
 
@@ -20,6 +20,82 @@ The result is a lightweight memory layer for OpenCode:
 - `daily/` stores append-only raw session logs
 - `knowledge/` stores compiled concepts, connections, and filed Q&A
 - `knowledge/index.md` becomes the main retrieval surface for future chats
+
+## How Memory Works
+
+This project gives OpenCode persistent memory across sessions through a two-tier system.
+
+### Tier 1: Raw Memory (`daily/`)
+
+Append-only logs capturing meaningful session deltas.
+
+- Automatically written when you idle after a conversation
+- The LLM decides what has durable value vs disposable chat
+
+### Tier 2: Compiled Knowledge (`knowledge/`)
+
+Daily logs are compiled into structured wiki articles.
+
+- One article per concept, pattern, decision, or lesson
+- Connection pages capture non-obvious cross-cutting insights
+- `knowledge/index.md` becomes the retrieval surface
+
+### Memory Lifecycle
+
+```text
+Session ──> Capture ──> Daily Log ──> Compile ──> Knowledge
+  ^                                                        │
+  └──────────────── Inject context back ───────────────────┘
+```
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                        OpenCode Session                         │
+│  (reads knowledge/index.md + recent daily logs on startup)      │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │  session idle
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  .opencode/plugins/llm-wiki.js                                  │
+│  captures new transcript delta, runs scripts/flush.py           │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │  if durable value
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  daily/YYYY-MM-DD.md                                            │
+│  append-only raw session log                                    │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │  compile (manual or auto after 6 PM)
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  knowledge/                                                     │
+│  concepts/, connections/, qa/, index.md                         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### How It Feeds Back
+
+- `knowledge/index.md` is injected into every new session's system prompt
+- Recent daily logs provide fresh context
+- This lets OpenCode "remember" your patterns, decisions, and preferences
+
+### Preventing Recursive Capture
+
+Internal maintenance runs set `OPENCODE_MEMORY_INTERNAL=1` so the capture plugin does not trigger during compile, query, or lint operations. This prevents the system from recording itself.
+
+### Automatic Behavior
+
+What happens automatically after installation:
+
+- On chat idle, the plugin captures the new part of the conversation
+- If the transcript has durable value, it appends an entry to `daily/YYYY-MM-DD.md`
+- The plugin injects `knowledge/index.md` and recent daily-log context back into future sessions
+
+Compilation behavior:
+
+- `daily/` capture is automatic
+- `knowledge/` compilation can auto-run after `6:00 PM` local time when a successful flush changed the current daily log
+- If you want compilation immediately, run it manually
 
 ## Repository Layout
 
@@ -73,20 +149,6 @@ your-project/
 ```
 
 Then run OpenCode from the target project root, not from `wiki/`.
-
-## Automatic Behavior
-
-What happens automatically after installation:
-
-- On chat idle, the plugin captures the new part of the conversation.
-- If the transcript has durable value, it appends an entry to `daily/YYYY-MM-DD.md`.
-- The plugin injects `knowledge/index.md` and recent daily-log context back into future sessions.
-
-Compilation behavior:
-
-- `daily/` capture is automatic.
-- `knowledge/` compilation can auto-run after `6:00 PM` local time when a successful flush changed the current daily log.
-- If you want compilation immediately, run it manually.
 
 ## Commands
 
