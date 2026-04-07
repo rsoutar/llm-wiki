@@ -152,7 +152,10 @@ elif [ -f "$TARGET/opencode.json" ]; then
   echo ""
 fi
 
-confirm_replacements "${REPLACEMENTS[@]}"
+# Bash 3.2 + `set -u` treats an empty array expansion as unbound, so guard it.
+if [ ${#REPLACEMENTS[@]} -gt 0 ]; then
+  confirm_replacements "${REPLACEMENTS[@]}"
+fi
 
 mkdir -p "$TARGET/wiki/scripts"
 mkdir -p "$TARGET/.opencode/plugins"

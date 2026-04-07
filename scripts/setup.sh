@@ -109,7 +109,10 @@ if [ -f "$TARGET/opencode.json" ]; then
   echo ""
 fi
 
-confirm_replacements "${REPLACEMENTS[@]}"
+# Bash 3.2 + `set -u` treats an empty array expansion as unbound, so guard it.
+if [ ${#REPLACEMENTS[@]} -gt 0 ]; then
+  confirm_replacements "${REPLACEMENTS[@]}"
+fi
 
 # 1. Copy wiki files into wiki/ subdirectory
 mkdir -p "$TARGET/wiki"
