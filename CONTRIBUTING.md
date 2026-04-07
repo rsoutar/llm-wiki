@@ -1,6 +1,6 @@
-# Contributing to llm-wiki
+# Contributing to opencode-wiki
 
-Thanks for your interest in **llm-wiki**! 🎉  
+Thanks for your interest in **opencode-wiki**.
 This project adapts Andrej Karpathy’s LLM Wiki pattern to OpenCode, turning your coding sessions into a self-improving, persistent knowledge base.
 
 All types of contributions are welcome — bug reports, feature ideas, documentation fixes, code improvements, or even just sharing how you're using it in your own projects.
@@ -8,6 +8,7 @@ All types of contributions are welcome — bug reports, feature ideas, documenta
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
+- [License Expectations](#license-expectations)
 - [Getting Started](#getting-started)
 - [Development Setup](#development-setup)
 - [How to Contribute](#how-to-contribute)
@@ -16,24 +17,29 @@ All types of contributions are welcome — bug reports, feature ideas, documenta
   - [Submitting Pull Requests](#submitting-pull-requests)
 - [Project Structure](#project-structure)
 - [Style Guidelines](#style-guidelines)
+- [Testing Guidance](#testing-guidance)
 - [Questions?](#questions)
 
 ## Code of Conduct
 
 We expect all contributors to be kind, respectful, and constructive. Harassment or offensive behavior of any kind will not be tolerated.
 
+## License Expectations
+
+This repository is licensed under the Apache License 2.0. By submitting a contribution, you agree that your contribution may be distributed under that same license.
+
 ## Getting Started
 
 1. Read the [README.md](README.md) to understand what the project does and how it works.
-2. Check the open [Issues](https://github.com/rsoutar/llm-wiki/issues) and [Pull Requests](https://github.com/rsoutar/llm-wiki/pulls) to see what's being worked on.
+2. Check the open [Issues](https://github.com/rsoutar/opencode-wiki/issues) and [Pull Requests](https://github.com/rsoutar/opencode-wiki/pulls) to see what's being worked on.
 3. If you're planning something substantial (new feature, architecture change, etc.), please open an issue first to discuss it — this helps avoid duplicated effort.
 
 ## Development Setup
 
 ```bash
 # Clone the repo
-git clone https://github.com/rsoutar/llm-wiki.git
-cd llm-wiki
+git clone https://github.com/rsoutar/opencode-wiki.git
+cd opencode-wiki
 
 # Install Python dependencies
 uv sync
@@ -42,7 +48,6 @@ uv sync
 npm install --prefix .opencode
 
 # Open the repository in OpenCode (important for testing the plugin)
-
 ```
 
 You can now run the main scripts:
@@ -110,26 +115,35 @@ Please open an issue with:
 
 Key directories and files you'll likely touch:
 
-- `.opencode/plugins/llm-wiki.js` — OpenCode plugin for capture & injection
+- `.opencode/plugins/opencode-wiki.js` — OpenCode plugin for capture & injection
+- `.opencode/package.json` — local plugin dependency manifest
 - `scripts/` — Core Python tools (`flush.py`, `compile.py`, `query.py`, `lint.py`)
+- `scripts/setup.sh` and `scripts/upgrade.sh` — installation and upgrade helpers for other repositories
 - `AGENTS.md` — Guidelines and schemas used by the compiler agents
-- `knowledge/` and `daily/` — Generated (do **not** commit real content from your own projects; keep the repo clean)
+- `knowledge/` and `daily/` — wiki state and source logs used for development; do **not** commit private or unrelated transcript content from your own projects
 - `opencode.json` — OpenCode configuration
+- `LICENSE` — Apache License 2.0 terms for the repository
 
 See [README.md](README.md) for full layout and flow.
 
 ## Style Guidelines
 
-- **Python**: Follow PEP 8. We use `uv` and `pyproject.toml` — run `uv run ruff check .` or `uv run ruff format .` if those tools are configured.
+- **Python**: Follow the existing style in `scripts/`. Keep changes small, readable, and compatible with Python 3.11+.
 - **JavaScript**: Keep it simple and consistent with the existing plugin (no heavy frameworks).
 - **Markdown**: Use clear, concise language. Prefer active voice.
 - **Commit messages**: Use conventional style when possible (e.g. `feat:`, `fix:`, `docs:`, `refactor:`).
+
+## Testing Guidance
+
+- For compiler, query, or lint changes, run the relevant `uv run python scripts/*.py` commands from the repo root.
+- For plugin changes, test from an OpenCode session launched at the repository root so the local `opencode.json` and `.opencode/plugins/opencode-wiki.js` are both active.
+- For setup or upgrade changes, validate the script against a temporary target repository before opening a PR.
 
 ## Questions?
 
 - Open an issue labeled `question`
 - Or reach out via GitHub Discussions if we enable them later
 
-Thank you again for contributing — every improvement helps make llm-wiki more useful for developers building long-term memory into their coding workflow!
+Thank you again for contributing — every improvement helps make opencode-wiki more useful for developers building long-term memory into their coding workflow!
 
-Happy wiki-building! 🚀
+Happy wiki-building!

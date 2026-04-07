@@ -1,5 +1,5 @@
 [project]
-name = "llm-wiki-opencode"
+name = "opencode-wiki"
 version = "0.1.0"
 description = "Persistent markdown knowledge base compiled from OpenCode conversations."
 requires-python = ">=3.11"

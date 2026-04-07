@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Usage: ./scripts/setup.sh [--force] /path/to/your/repo
-# Copies llm-wiki into a 'wiki/' subdirectory of your project
+# Copies opencode-wiki into a 'wiki/' subdirectory of your project
 # and sets up the OpenCode plugin at the project root.
 
 set -euo pipefail
@@ -22,7 +22,7 @@ confirm_replacements() {
     return 0
   fi
 
-  echo "Warning: setup will replace or merge into existing llm-wiki files:"
+  echo "Warning: setup will replace or merge into existing opencode-wiki files:"
   for path in "${replacements[@]}"; do
     echo "  - $path"
   done
@@ -84,7 +84,7 @@ if [ ! -d "$TARGET" ]; then
   exit 1
 fi
 
-echo "Setting up llm-wiki in $TARGET/wiki/"
+echo "Setting up opencode-wiki in $TARGET/wiki/"
 
 declare -a REPLACEMENTS=()
 for rel_path in \
@@ -94,6 +94,7 @@ for rel_path in \
   "wiki/scripts" \
   "wiki/daily" \
   "wiki/knowledge" \
+  ".opencode/plugins/opencode-wiki.js" \
   ".opencode/plugins/llm-wiki.js" \
   ".opencode/package.json"; do
   if [ -e "$TARGET/$rel_path" ]; then
@@ -121,7 +122,8 @@ cp -r "$WIKI_DIR/knowledge" "$TARGET/wiki/"
 
 # 2. Copy plugin to project root .opencode/
 mkdir -p "$TARGET/.opencode/plugins"
-cp "$WIKI_DIR/.opencode/plugins/llm-wiki.js" "$TARGET/.opencode/plugins/"
+rm -f "$TARGET/.opencode/plugins/llm-wiki.js"
+cp "$WIKI_DIR/.opencode/plugins/opencode-wiki.js" "$TARGET/.opencode/plugins/"
 cp "$WIKI_DIR/.opencode/package.json" "$TARGET/.opencode/"
 
 # 3. Install plugin dependencies
@@ -172,7 +174,7 @@ echo ""
 echo "  $TARGET/"
 echo "    opencode.json          # OpenCode config (points to wiki/)"
 echo "    .opencode/"
-echo "      plugins/llm-wiki.js  # Plugin"
+echo "      plugins/opencode-wiki.js  # Plugin"
 echo "    wiki/"
 echo "      AGENTS.md            # Wiki compiler spec"
 echo "      daily/               # Session logs"

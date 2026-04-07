@@ -210,7 +210,7 @@ Check for:
 
 ## OpenCode Integration
 
-This repo includes a local OpenCode plugin in `.opencode/plugins/llm-wiki.js`.
+This repo includes a local OpenCode plugin in `.opencode/plugins/opencode-wiki.js`.
 
 It does three things:
 

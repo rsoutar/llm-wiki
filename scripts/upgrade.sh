@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Usage: ./scripts/upgrade.sh [--force] [--sync-root-config] /path/to/your/repo
-# Upgrades llm-wiki runtime files in an installed project without touching wiki data.
+# Upgrades opencode-wiki runtime files in an installed project without touching wiki data.
 
 set -euo pipefail
 
@@ -53,7 +53,7 @@ confirm_replacements() {
     return 0
   fi
 
-  echo "Warning: upgrade will replace existing llm-wiki runtime files:"
+  echo "Warning: upgrade will replace existing opencode-wiki runtime files:"
   for path in "${replacements[@]}"; do
     echo "  - $path"
   done
@@ -129,7 +129,7 @@ if [ ! -d "$TARGET/wiki" ]; then
   exit 1
 fi
 
-echo "Upgrading llm-wiki in $TARGET/"
+echo "Upgrading opencode-wiki in $TARGET/"
 
 declare -a REPLACEMENTS=()
 for rel_path in \
@@ -137,6 +137,7 @@ for rel_path in \
   "wiki/opencode.json" \
   "wiki/pyproject.toml" \
   "wiki/scripts" \
+  ".opencode/plugins/opencode-wiki.js" \
   ".opencode/plugins/llm-wiki.js" \
   ".opencode/package.json"; do
   if [ -e "$TARGET/$rel_path" ]; then
@@ -165,7 +166,8 @@ rsync -a \
   --exclude 'last-flush.json' \
   "$WIKI_DIR/scripts/" "$TARGET/wiki/scripts/"
 
-cp "$WIKI_DIR/.opencode/plugins/llm-wiki.js" "$TARGET/.opencode/plugins/"
+rm -f "$TARGET/.opencode/plugins/llm-wiki.js"
+cp "$WIKI_DIR/.opencode/plugins/opencode-wiki.js" "$TARGET/.opencode/plugins/"
 cp "$WIKI_DIR/.opencode/package.json" "$TARGET/.opencode/"
 
 if [ "$SYNC_ROOT_CONFIG" -eq 1 ]; then

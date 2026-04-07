@@ -1,4 +1,4 @@
-# LLM Wiki for OpenCode
+# OpenCode Wiki
 
 OpenCode conversations compile themselves into a persistent Markdown wiki. This gives OpenCode a two-tier memory system that retains knowledge across sessions.
 
@@ -8,7 +8,7 @@ This project adapts Andrej Karpathy's [LLM Wiki pattern](https://gist.github.com
 
 ```text
 OpenCode session
-  -> .opencode/plugins/llm-wiki.js captures new transcript deltas
+  -> .opencode/plugins/opencode-wiki.js captures new transcript deltas
   -> scripts/flush.py summarizes them into daily/YYYY-MM-DD.md
   -> scripts/compile.py compiles daily logs into knowledge/*
   -> scripts/query.py answers questions from the wiki
@@ -56,7 +56,7 @@ Session ──> Capture ──> Daily Log ──> Compile ──> Knowledge
                            │  session idle
                            ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  .opencode/plugins/llm-wiki.js                                  │
+│  .opencode/plugins/opencode-wiki.js                             │
 │  captures new transcript delta, runs scripts/flush.py           │
 └──────────────────────────┬──────────────────────────────────────┘
                            │  if durable value
@@ -106,7 +106,7 @@ Compilation behavior:
 ├── knowledge/
 ├── opencode.json
 ├── scripts/
-└── .opencode/plugins/llm-wiki.js
+└── .opencode/plugins/opencode-wiki.js
 ```
 
 ## Requirements
@@ -135,14 +135,14 @@ The easiest path is the setup script:
 ./scripts/setup.sh /path/to/your/project
 ```
 
-If the target repo already contains `wiki/` content or `.opencode/plugins/llm-wiki.js`, the script now prints a warning before replacing or merging those paths. Use `--force` to skip the confirmation prompt.
+If the target repo already contains `wiki/` content or `.opencode/plugins/opencode-wiki.js`, the script now prints a warning before replacing or merging those paths. Use `--force` to skip the confirmation prompt.
 
 That creates this structure inside the target project:
 
 ```text
 your-project/
 ├── opencode.json
-├── .opencode/plugins/llm-wiki.js
+├── .opencode/plugins/opencode-wiki.js
 └── wiki/
     ├── AGENTS.md
     ├── daily/
@@ -166,7 +166,7 @@ What it upgrades:
 - `wiki/scripts/`
 - `wiki/opencode.json`
 - `wiki/pyproject.toml`
-- `.opencode/plugins/llm-wiki.js`
+- `.opencode/plugins/opencode-wiki.js`
 - `.opencode/package.json`
 
 What it preserves:
@@ -206,7 +206,7 @@ uv run python scripts/lint.py --structural-only
 If `daily/` is not updating:
 
 - Make sure you launched OpenCode from the project root that contains `opencode.json`.
-- Check `.opencode/plugins/llm-wiki.js` exists in the target project.
+- Check `.opencode/plugins/opencode-wiki.js` exists in the target project.
 - Check `wiki/scripts/flush.log` and `wiki/.opencode/flush-errors.log` in the installed project.
 - Make sure `npm install` has been run inside the target project's `.opencode/`.
 
@@ -215,17 +215,8 @@ If `knowledge/` is not updating:
 - Run `uv run python scripts/compile.py` manually once to confirm the compile path works.
 - Remember that automatic compile is time-gated to after `6:00 PM` local time.
 
-## Open Source Checklist
+## License
 
-Before publishing, the main remaining non-code items are:
+This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for the full text.
 
-- License: Apache 2.0
-- Add a short GitHub description and topics
-- Add one real example or screenshot of `daily/` and `knowledge/`
-- Optionally add `CONTRIBUTING.md` once you want outside patches
-
-## Notes
-
-- Automatic capture happens through the local OpenCode plugin in `.opencode/plugins/`.
-- Internal maintenance runs set `OPENCODE_MEMORY_INTERNAL=1` so they do not recursively trigger the capture plugin.
-- The wiki works best when `knowledge/index.md` stays compact and high-signal.
+Unless noted otherwise, contributions submitted to this repository are accepted under the same Apache 2.0 terms.

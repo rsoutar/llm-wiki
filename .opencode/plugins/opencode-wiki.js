@@ -78,7 +78,7 @@ async function buildKnowledgeContext(rootDir) {
   }
 
   const context = [
-    "## LLM Wiki",
+    "## OpenCode Wiki",
     "",
     knowledgeIndex
       ? `### Knowledge Index\n\n${knowledgeIndex}`
@@ -172,7 +172,7 @@ async function spawnFlush(rootDir, sessionID, reason, transcript, debugLog) {
   }
 }
 
-export const LlmWikiPlugin = async ({ client, directory }) => {
+export const OpencodeWikiPlugin = async ({ client, directory }) => {
   if (process.env[INTERNAL_ENV]) {
     return {};
   }
@@ -203,7 +203,7 @@ export const LlmWikiPlugin = async ({ client, directory }) => {
     try {
       await client.app.log({
         body: {
-          service: "llm-wiki",
+          service: "opencode-wiki",
           level,
           message,
           extra,
